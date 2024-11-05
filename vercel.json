@@ -5,6 +5,9 @@
     ],
     "routes": [
       { "src": "/(.*)", "dest": "index.py" }
-    ]
+    ],
+    "env": {
+      "PIP_REQUIREMENTS": "requirements-vercel.txt"
+    }
   }
   
