@@ -1,11 +1,12 @@
-from flask import Flask, request, Response
+from flask import Flask, request, Response, stream_with_context
 from resolverurl.hmf import HostedMediaFile
 import urllib.parse
+import requests
 
 app = Flask(__name__)
 
-@app.route('/resolve')
-def resolve_url():
+@app.route('/stream')
+def stream_video():
     # Obtenir l'URL de base à partir des paramètres de requête
     base_url = request.args.get('url')
     if not base_url:
@@ -18,8 +19,7 @@ def resolve_url():
     media_url = hmf.resolve()
 
     if media_url:
-        # Extraire User-Agent, Referer, etc. de l'URL résolue si nécessaire
-        # Exemple : https://example.com/video.mp4|User-Agent=...&Referer=...
+        # Extraire l'URL directe et les en-têtes supplémentaires
         url_parts = media_url.split('|')
         direct_url = url_parts[0]
         headers = {}
@@ -31,27 +31,23 @@ def resolve_url():
                 key, value = param.split('=')
                 headers[key.replace('-', '_')] = urllib.parse.unquote(value)
 
-        # Générer le contenu du fichier M3U
-        m3u_content = "#EXTM3U\n"
-        m3u_content += "#EXTINF:-1,%s\n" % base_url  # Vous pouvez personnaliser le titre
-        for key, value in headers.items():
-            # VLC utilise des options spécifiques pour les en-têtes HTTP
-            if key.lower() == 'user_agent':
-                m3u_content += '#EXTVLCOPT:http-user-agent=%s\n' % value
-            elif key.lower() == 'referer':
-                m3u_content += '#EXTVLCOPT:http-referrer=%s\n' % value
-            elif key.lower() == 'cookie':
-                m3u_content += '#EXTVLCOPT:http-cookie=%s\n' % value
-            elif key.lower() == 'origin':
-                m3u_content += '#EXTVLCOPT:http-origin=%s\n' % value
-            else:
-                # Pour d'autres en-têtes, utilisez http-header personnalisé
-                m3u_content += '#EXTVLCOPT:http-header=%s=%s\n' % (key, value)
-        m3u_content += '%s\n' % direct_url
+        # Fonction pour streamer le contenu
+        def generate():
+            with requests.get(direct_url, headers=headers, stream=True) as r:
+                r.raise_for_status()
+                for chunk in r.iter_content(chunk_size=8192):
+                    yield chunk
 
-        # Retourner le contenu M3U avec le type de contenu approprié
-        return Response(m3u_content, mimetype='audio/mpegurl')
+        # Déterminer le type de contenu à partir des en-têtes de la réponse
+        content_type = 'application/octet-stream'
+        response_headers = {}
+        head = requests.head(direct_url, headers=headers)
+        if 'Content-Type' in head.headers:
+            content_type = head.headers['Content-Type']
+        if 'Content-Length' in head.headers:
+            response_headers['Content-Length'] = head.headers['Content-Length']
 
-    # En cas d'échec de la résolution, renvoyer une erreur 404
-    return "Failed to resolve the media URL.", 404
-
+        # Retourner la réponse en streaming
+        return Response(stream_with_context(generate()), headers=response_headers, content_type=content_type)
+    else:
+        return "Failed to resolve the media URL.", 404
