@@ -35,6 +35,3 @@ def resolve_url():
 
     # En cas d'échec de la résolution, renvoyer une erreur 404
     return jsonify({"error": "Failed to resolve the media URL"}), 404
-
-if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000, debug=True)
