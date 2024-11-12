@@ -20,7 +20,7 @@ from resolverurl.plugins.__resolve_generic__ import ResolveGeneric
 
 
 class DarkIBoxResolver(ResolveGeneric):
-    name = 'DarkIBox'
+    name = 'Darkibox'
     domains = ['darkibox.com']
     pattern = r'(?://|\.)(darkibox\.com)/(?:embed-)?([0-9a-zA-Z]+)'
 

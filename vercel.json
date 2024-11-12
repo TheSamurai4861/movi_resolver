@@ -1,13 +1,15 @@
 {
-    "version": 2,
-    "builds": [
-      { "src": "index.py", "use": "@vercel/python" }
-    ],
-    "routes": [
-      { "src": "/(.*)", "dest": "index.py" }
-    ],
-    "env": {
-      "PIP_REQUIREMENTS": "requirements-vercel.txt"
+  "version": 2,
+  "builds": [
+    {
+      "src": "index.py",
+      "use": "@vercel/python"
     }
-  }
-  
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "index.py"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+    "primary_video": {
+        "src": "https://darkibox.com/embed-2e12a274c4b6.html",
+        "language": "MULTI",
+        "quality": "WEB 720p"
+    },
+    "alternative_videos": [
+        {
+            "src": "https://darkibox.com/embed-ph5iz7rsj50y.html",
+            "language": "MULTI",
+            "quality": "Ultra HDLight (x265)"
+        },
+        {
+            "src": "https://darkibox.com/embed-m2zplwan75ux.html",
+            "language": "MULTI",
+            "quality": "Blu-Ray 1080p (x265)"
+        },
+        {
+            "src": "https://darkibox.com/embed-ep5a0f5rbpc5.html",
+            "language": "MULTI",
+            "quality": "HDLight 1080p"
+        },
+        {
+            "src": "https://darkibox.com/embed-n2tfpm4gwny3.html",
+            "language": "TrueFrench",
+            "quality": "BRRIP"
+        }
+    ]
+}
