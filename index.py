@@ -1,21 +1,24 @@
 from flask import Flask, request, jsonify
-import request
-import urllib.parse
+from resolver import get_media_direct_links
+import requests  # Renaming to avoid conflict
 
 app = Flask(__name__)
 
 @app.route('/resolve')
 def resolve_url():
-    # Obtenir l'URL de base à partir des paramètres de requête
+    # Obtain the base URL from query parameters
     base_url = request.args.get('url')
     if not base_url:
         return jsonify({"error": "URL parameter is required"}), 400
 
-    # Résoudre l'URL pour obtenir le lien direct vers le média
-    media_urls = request.get_media_direct_links(base_url)
+    # Resolve the URL to get the direct link to the media
+    media_urls = get_media_direct_links(base_url)
 
     if media_urls:
         return jsonify(media_urls)
 
-    # En cas d'échec de la résolution, renvoyer une erreur 404
+    # If resolution fails, return a 404 error
     return jsonify({"error": "Failed to resolve the media URL"}), 404
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
