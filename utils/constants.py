@@ -1,0 +1,2 @@
+tmdb_access_token = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0ZjliZDI0YzhiMjYyNWUyMzk2ZTNlZjg2YTg5ZmU0YyIsIm5iZiI6MTczMTc2MzI1MC42OTU1NjEyLCJzdWIiOiI2MjQwNTY0MWM3NDBkOTAwNDdhMzZjYzMiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.fbuA-ZrjBmdf7Ev8x5zDzK-wMzpO5CfyqoMJOOD91Xg'
+darkiwolrd_url = 'https://darkiworld.vip'

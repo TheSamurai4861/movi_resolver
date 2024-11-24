@@ -4,11 +4,14 @@ import unicodedata
 import cloudscraper
 import urllib.parse
 
+tmdb_access_token = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0ZjliZDI0YzhiMjYyNWUyMzk2ZTNlZjg2YTg5ZmU0YyIsIm5iZiI6MTczMTc2MzI1MC42OTU1NjEyLCJzdWIiOiI2MjQwNTY0MWM3NDBkOTAwNDdhMzZjYzMiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.fbuA-ZrjBmdf7Ev8x5zDzK-wMzpO5CfyqoMJOOD91Xg'
+darkiworld_url = 'https://darkiworld.xyz'
+
 # Assurez-vous que ce module est installé et accessible
 from resolverurl.hmf import HostedMediaFile
 
 def get_primary_video_ids(scraper, title_id, referer, season_number=None, episode_number=None):
-    title_url = f'https://darkiworld.vip/api/v1/titles/{title_id}?loader=titlePage'
+    title_url = f'{darkiworld_url}/api/v1/titles/{title_id}?loader=titlePage'
     headers = {
         'Accept': 'application/json',
         'Referer': referer,
@@ -39,7 +42,7 @@ def get_primary_video_ids(scraper, title_id, referer, season_number=None, episod
             page = 1
             found = False
             while not found:
-                episodes_url = f'https://darkiworld.vip/api/v1/titles/{title_id}/seasons/{season_number}/episodes?truncateDescriptions=true&staleTime=300000&query=&page={page}'
+                episodes_url = f'{darkiworld_url}/api/v1/titles/{title_id}/seasons/{season_number}/episodes?truncateDescriptions=true&staleTime=300000&query=&page={page}'
                 episodes_response = scraper.get(episodes_url, headers=headers)
                 if episodes_response.status_code != 200:
                     print(f"Échec de la requête pour les épisodes de la saison. Code d'état: {episodes_response.status_code}")
@@ -90,9 +93,9 @@ def download_video(scraper, id_lien):
     Télécharge les informations du lien vidéo en gérant les cookies et le jeton CSRF.
     """
     # URL de téléchargement
-    download_url = f'https://darkiworld.vip/api/v1/download/{id_lien}'
+    download_url = f'{darkiworld_url}/api/v1/download/{id_lien}'
     # URL de référence
-    referer_url = f'https://darkiworld.vip/download/{id_lien}'
+    referer_url = f'{darkiworld_url}/download/{id_lien}'
 
     # Effectuer une première requête pour obtenir les cookies et le jeton CSRF
     initial_response = scraper.get(referer_url)
@@ -187,13 +190,93 @@ def extract_title_id_and_slug(url):
     else:
         return None, None
 
-def get_media_direct_links(tmdb_id, quality=None, season_number=None, episode_number=None):
+def filter_with_arguments(links, quality, language):
+    expected_link = None
+    if quality==None:
+        link = links[0]
+        hmf = HostedMediaFile(url=link['src'])
+        media_url = hmf.resolve()
+        if media_url:
+            url_parts = media_url.split('|')
+            direct_url = url_parts[0]
+            headers = {}
+
+            # Analyser les en-têtes additionnels, si présents
+            if len(url_parts) > 1:
+                header_params = url_parts[1].split('&')
+                for param in header_params:
+                    if '=' in param:
+                        key, value = param.split('=', 1)
+                        headers[key.replace('-', '_')] = urllib.parse.unquote(value)
+
+            output_link = {
+                "url": direct_url,
+                "language": link['language'],
+                "quality": link['quality'],
+                "headers": headers
+            }
+
+            if 'season' in link and 'episode' in link:
+                output_link['season'] = link['season']
+                output_link['episode'] = link['episode']
+
+            expected_link = output_link
+        else:
+            print(f"Impossible de résoudre l'URL média pour src: {link['src']}")
+    else :
+        for link in links:
+            # Filtrer par qualité
+            link_quality = link.get('quality', '').lower()
+            link_language = link.get('language', '').lower()
+            if quality:
+                if quality == '1080' and '1080' not in link_quality:
+                    continue
+                elif quality == '2160' and ('ultra' not in link_quality and '2160' not in link_quality):
+                    continue
+                elif quality == '720' and '720' not in link_quality:
+                    continue
+            if language:
+                if language == 'fr' and 'fr' not in link_language and 'multi' not in link_language:
+                    continue
+                elif language == 'en' and 'en' not in link_language and 'multi' not in link_language:
+                    continue
+            hmf = HostedMediaFile(url=link['src'])
+            media_url = hmf.resolve()
+            if media_url:
+                url_parts = media_url.split('|')
+                direct_url = url_parts[0]
+                headers = {}
+
+                # Analyser les en-têtes additionnels, si présents
+                if len(url_parts) > 1:
+                    header_params = url_parts[1].split('&')
+                    for param in header_params:
+                        if '=' in param:
+                            key, value = param.split('=', 1)
+                            headers[key.replace('-', '_')] = urllib.parse.unquote(value)
+
+                output_link = {
+                    "url": direct_url,
+                    "language": link['language'],
+                    "quality": link['quality'],
+                    "headers": headers
+                }
+
+                if 'season' in link and 'episode' in link:
+                    output_link['season'] = link['season']
+                    output_link['episode'] = link['episode']
+
+                expected_link = output_link
+                # Puisque nous ne voulons que le premier correspondant à la qualité, nous sortons de la boucle
+                break
+            else:
+                print(f"Impossible de résoudre l'URL média pour src: {link['src']}")
+    return expected_link
+
+def get_media_direct_links(tmdb_id, quality, language, season_number=None, episode_number=None):
     # Initialiser cloudscraper
     scraper = cloudscraper.create_scraper()
 
-    # Étape 1: Obtenir le titre à partir de tmdb_id via l'API TMDB
-    tmdb_api_key = 'VOTRE_CLÉ_API_TMDB'  # Remplacez par votre clé API TMDB
-    tmdb_access_token = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0ZjliZDI0YzhiMjYyNWUyMzk2ZTNlZjg2YTg5ZmU0YyIsIm5iZiI6MTczMTc2MzI1MC42OTU1NjEyLCJzdWIiOiI2MjQwNTY0MWM3NDBkOTAwNDdhMzZjYzMiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.fbuA-ZrjBmdf7Ev8x5zDzK-wMzpO5CfyqoMJOOD91Xg'  # Remplacez par votre Access Token TMDB
     tmdb_url = ''
     if season_number :
         tmdb_url = f'https://api.themoviedb.org/3/tv/{tmdb_id}?language=fr-FR'
@@ -218,21 +301,21 @@ def get_media_direct_links(tmdb_id, quality=None, season_number=None, episode_nu
 
     # Étape 2: Rechercher le titre sur DarkiWorld
     search_title = urllib.parse.quote(title)
-    search_url = f'https://darkiworld.vip/api/v1/search/{search_title}?loader=searchPage'
+    search_url = f'{darkiworld_url}/api/v1/search/{search_title}?loader=searchPage'
     headers = {
         'Accept': 'application/json',
-        'Referer': f'https://darkiworld.vip/search/{search_title}',
+        'Referer': f'{darkiworld_url}/search/{search_title}',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
     }
 
     # Effectuer une première requête pour obtenir les cookies et le jeton CSRF
-    initial_response = scraper.get(f'https://darkiworld.vip/search/{search_title}')
+    initial_response = scraper.get(f'{darkiworld_url}/search/{search_title}')
     if initial_response.status_code != 200:
         print(f"Échec du chargement de la page de recherche pour le titre '{title}'. Code d'état: {initial_response.status_code}")
         return None
 
     # **NOUVEAU** : Visiter la page d'accueil pour initialiser les cookies
-    homepage_response = scraper.get('https://darkiworld.vip')
+    homepage_response = scraper.get(f'{darkiworld_url}')
     if homepage_response.status_code != 200:
         print(f"Échec du chargement de la page d'accueil. Code d'état: {homepage_response.status_code}")
         return None
@@ -244,9 +327,6 @@ def get_media_direct_links(tmdb_id, quality=None, season_number=None, episode_nu
         headers['x-xsrf-token'] = xsrf_token
     else:
         print("Impossible de trouver le jeton XSRF-TOKEN dans les cookies après la visite de la page d'accueil.")
-        
-
-    
 
     # Effectuer la requête de recherche
     response = scraper.get(search_url, headers=headers)
@@ -284,7 +364,7 @@ def get_media_direct_links(tmdb_id, quality=None, season_number=None, episode_nu
     # Supprimer les deux-points, apostrophes, virgules
     formatted_title = formatted_title.replace(':', '').replace("'", '').replace(',', '')
 
-    url = f'https://darkiworld.vip/titles/{title_id}/{formatted_title}'
+    url = f'{darkiworld_url}/titles/{title_id}/{formatted_title}'
     print(f"URL construite: {url}")
 
     # Étape 5: Obtenir les id_lien
@@ -293,7 +373,7 @@ def get_media_direct_links(tmdb_id, quality=None, season_number=None, episode_nu
         print("Impossible d'obtenir les id_lien. Fin du script.")
         return
 
-    all_video_links = []
+    video_links = None
 
     # Étape 6: Pour chaque id_lien, faire la requête de téléchargement
     for item in id_liens:
@@ -311,95 +391,25 @@ def get_media_direct_links(tmdb_id, quality=None, season_number=None, episode_nu
             print(f"Aucune donnée filtrée disponible pour id_lien {id_lien}.")
             continue
 
-        # Traitement supplémentaire : Extraction des liens vidéo avec HostedMediaFile
-        for link in video_links:
-            # Filtrer par qualité
-            link_quality = link.get('quality', '').lower()
-            if quality:
-                if quality == '1080' and '1080' not in link_quality:
-                    continue
-                elif quality == '2160' and ('ultra' not in link_quality and '2160' not in link_quality):
-                    continue
-                elif quality == '720' and '720' not in link_quality:
-                    continue
-            hmf = HostedMediaFile(url=link['src'])
-            media_url = hmf.resolve()
-            if media_url:
-                url_parts = media_url.split('|')
-                direct_url = url_parts[0]
-                headers = {}
+    expected_link = filter_with_arguments(video_links, quality, language)
 
-                # Analyser les en-têtes additionnels, si présents
-                if len(url_parts) > 1:
-                    header_params = url_parts[1].split('&')
-                    for param in header_params:
-                        if '=' in param:
-                            key, value = param.split('=', 1)
-                            headers[key.replace('-', '_')] = urllib.parse.unquote(value)
-
-                output_link = {
-                    "url": direct_url,
-                    "language": link['language'],
-                    "quality": link['quality'],
-                    "headers": headers
-                }
-
-                if 'season' in link and 'episode' in link:
-                    output_link['season'] = link['season']
-                    output_link['episode'] = link['episode']
-
-                all_video_links.append(output_link)
-                # Puisque nous ne voulons que le premier correspondant à la qualité, nous sortons de la boucle
-                break
-            else:
-                print(f"Impossible de résoudre l'URL média pour src: {link['src']}")
-
-        if all_video_links:
-            # Nous avons trouvé au moins un lien, inutile de continuer
-            break
-        else : 
-            link = video_links[0]
-            hmf = HostedMediaFile(url=link['src'])
-            media_url = hmf.resolve()
-            if media_url:
-                url_parts = media_url.split('|')
-                direct_url = url_parts[0]
-                headers = {}
-
-                # Analyser les en-têtes additionnels, si présents
-                if len(url_parts) > 1:
-                    header_params = url_parts[1].split('&')
-                    for param in header_params:
-                        if '=' in param:
-                            key, value = param.split('=', 1)
-                            headers[key.replace('-', '_')] = urllib.parse.unquote(value)
-
-                output_link = {
-                    "url": direct_url,
-                    "language": link['language'],
-                    "quality": link['quality'],
-                    "headers": headers
-                }
-
-                if 'season' in link and 'episode' in link:
-                    output_link['season'] = link['season']
-                    output_link['episode'] = link['episode']
-
-                all_video_links.append(output_link)
-                # Puisque nous ne voulons que le premier correspondant à la qualité, nous sortons de la boucle
-                break
-            else:
-                print(f"Impossible de résoudre l'URL média pour src: {link['src']}")
-    return all_video_links
+    if expected_link:
+        return expected_link
+    else : 
+        expected_link = None
+        if quality=='2160':
+            expected_link = filter_with_arguments(video_links, '1080', language)
+        elif quality=='1080':
+            expected_link = filter_with_arguments(video_links, '720', language)
+        if not expected_link : 
+            expected_link = filter_with_arguments(video_links, None, language) 
+    return expected_link
 
 
-# tmdb_id = 124364  # Exemple pour le film Titanic
+# tmdb_id = 1726  # Exemple pour le film Titanic
 # quality = '1080'  # Qualité souhaitée (1080, 2160, 720)
+# language = 'fr'
 # season_number = 1  # Facultatif, pour les séries
 # episode_number = 1  # Facultatif, pour les séries
 
-# liens_videos = get_media_direct_links(tmdb_id, quality, season_number, episode_number)
-
-# # Afficher les liens vidéo obtenus
-# for lien in liens_videos:
-#     print(lien)
+# lien_video = get_media_direct_links(tmdb_id, quality, None, None, language)
