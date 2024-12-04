@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, redirect
-from utils.resolver import get_media_direct_links
+from utils.resolver import get_media_direct_links, get_media_direct_url
 
 app = Flask(__name__)
 
