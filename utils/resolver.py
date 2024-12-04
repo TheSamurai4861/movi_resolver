@@ -209,14 +209,14 @@ def get_media_direct_url(url):
 
         output_link = {
             "url": direct_url,
-            "language": link['language'],
-            "quality": link['quality'],
+            "language": "",
+            "quality": "",
             "headers": headers
         }
 
         if 'season' in link and 'episode' in link:
-            output_link['season'] = link['season']
-            output_link['episode'] = link['episode']
+            output_link['season'] = ""
+            output_link['episode'] = ""
 
         expected_link = output_link
     else:
