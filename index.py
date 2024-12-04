@@ -31,7 +31,22 @@ def stream_media():
     except Exception as e:
         print(f"An error occurred: {e}")
         return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
-    
+
+@app.route('/stream_url')
+def stream_media_url():
+    url = request.args.get('url')
+    if not url:  # Updated condition to ensure both are present
+        return jsonify({"error": "Parameters 'url' is required"}), 400
+    try: 
+        media = get_media_direct_url(url)
+        if media: 
+            return jsonify(media)
+        else : 
+            return jsonify({"error" : "No media direct link for the requested media."}), 404
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
+
 @app.route('/resolve')
 def resolve_media():
     # Obtain parameters from query
