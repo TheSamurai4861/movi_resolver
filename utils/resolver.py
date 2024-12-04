@@ -190,6 +190,39 @@ def extract_title_id_and_slug(url):
     else:
         return None, None
 
+def get_media_direct_url(url):
+    expected_link = None
+    hmf = HostedMediaFile(url=link['src'])
+    media_url = hmf.resolve()
+    if media_url:
+        url_parts = media_url.split('|')
+        direct_url = url_parts[0]
+        headers = {}
+
+            # Analyser les en-têtes additionnels, si présents
+        if len(url_parts) > 1:
+            header_params = url_parts[1].split('&')
+            for param in header_params:
+                if '=' in param:
+                    key, value = param.split('=', 1)
+                    headers[key.replace('-', '_')] = urllib.parse.unquote(value)
+
+        output_link = {
+            "url": direct_url,
+            "language": link['language'],
+            "quality": link['quality'],
+            "headers": headers
+        }
+
+        if 'season' in link and 'episode' in link:
+            output_link['season'] = link['season']
+            output_link['episode'] = link['episode']
+
+        expected_link = output_link
+    else:
+        print(f"Impossible de résoudre l'URL média pour src: {link['src']}")
+    return expected_link
+
 def filter_with_arguments(links, quality, language):
     expected_link = None
     if quality==None:
