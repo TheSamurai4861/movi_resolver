@@ -214,10 +214,6 @@ def get_media_direct_url(url):
             "headers": headers
         }
 
-        if 'season' in link and 'episode' in link:
-            output_link['season'] = ""
-            output_link['episode'] = ""
-
         expected_link = output_link
     else:
         print(f"Impossible de résoudre l'URL média pour src: {link['src']}")
