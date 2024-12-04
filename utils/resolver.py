@@ -192,7 +192,7 @@ def extract_title_id_and_slug(url):
 
 def get_media_direct_url(url):
     expected_link = None
-    hmf = HostedMediaFile(url=link['src'])
+    hmf = HostedMediaFile(url)
     media_url = hmf.resolve()
     if media_url:
         url_parts = media_url.split('|')
