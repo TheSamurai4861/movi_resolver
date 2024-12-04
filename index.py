@@ -40,7 +40,7 @@ def stream_media_url():
     try: 
         media = get_media_direct_url(url)
         if media: 
-            return jsonify(media)
+            return redirect(media['url'])
         else : 
             return jsonify({"error" : "No media direct link for the requested media."}), 404
     except Exception as e:
